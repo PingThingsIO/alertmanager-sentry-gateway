@@ -27,7 +27,7 @@ var (
 )
 
 const (
-	defaultTemplate = "{{ .Labels.alertname }} - {{ .Labels.instance }}\n{{ .Annotations.description }}"
+	defaultTemplate = "{{ .Labels.alertname }} - {{ .Labels.namespace }}/{{ .Labels.pod_name}}\n{{ .Annotations.message }}"
 )
 
 func main() {
@@ -157,18 +157,25 @@ func worker(hookChan chan *notify.WebhookMessage, t *template.Template) {
 	for wh := range hookChan {
 		for _, alert := range wh.Alerts {
 			var buf bytes.Buffer
-
+			var msg string
 			err := t.Execute(&buf, alert)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Invalid template: %s\n", err)
-				continue
+				if alert.Labels["alertname"] == "" {
+					msg = "fallback"
+				} else {
+					msg = alert.Labels["alertname"]
+				}
+			} else {
+				msg = buf.String()
 			}
-
 			packet := &raven.Packet{
-				Timestamp: raven.Timestamp(alert.StartsAt),
-				Message:   buf.String(),
-				Extra:     map[string]interface{}{},
-				Logger:    "alertmanager",
+				Timestamp:   raven.Timestamp(alert.StartsAt),
+				Message:     msg,
+				Extra:       map[string]interface{}{},
+				Logger:      "alertmanager",
+				Fingerprint: []string{alert.Labels["alertname"], alert.Labels["namespace"], alert.Labels["pod_name"]},
+				ServerName:  fmt.Sprintf("%s/%s", alert.Labels["namespace"], alert.Labels["pod_name"]),
 			}
 
 			eventID, ch := raven.Capture(packet, alert.Labels)

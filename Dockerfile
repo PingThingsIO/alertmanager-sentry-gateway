@@ -1,6 +1,6 @@
-FROM alpine:3.4
+FROM ubuntu:xenial
 MAINTAINER Moto Ishizawa "summerwind.jp"
 
 COPY ./alertmanager-sentry-gateway /bin/alertmanager-sentry-gateway
 
-ENTRYPOINT ["alertmanager-sentry-gateway"]
+ENTRYPOINT ["/bin/alertmanager-sentry-gateway"]
