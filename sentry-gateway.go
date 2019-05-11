@@ -170,9 +170,11 @@ func worker(hookChan chan *notify.WebhookMessage, t *template.Template) {
 				msg = buf.String()
 			}
 			packet := &raven.Packet{
-				Timestamp:   raven.Timestamp(alert.StartsAt),
-				Message:     msg,
-				Extra:       map[string]interface{}{},
+				Timestamp: raven.Timestamp(time.Now()),
+				Message:   msg,
+				Extra: map[string]interface{}{
+					"firing_since": raven.Timestamp(alert.StartsAt),
+					"firing_until": raven.Timestamp(alert.EndsAt)},
 				Logger:      "alertmanager",
 				Fingerprint: []string{alert.Labels["alertname"], alert.Labels["namespace"], alert.Labels["pod_name"]},
 				ServerName:  fmt.Sprintf("%s/%s", alert.Labels["namespace"], alert.Labels["pod_name"]),
